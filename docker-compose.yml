@@ -1,0 +1,70 @@
+version: '3'
+
+networks:
+  backend:
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: ms-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - backend
+  mysql:
+    image: mysql:8.0.29
+    container_name: ms-mysql
+
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: homestead
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: laravel
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    networks:
+      - backend
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-php
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - "9000:9000"
+    networks:
+      - backend
+
+  composer:
+    image: composer:latest
+    container_name: ms-composer
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - php
+    networks:
+      - backend
+
+  artisan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-artisan
+    volumes:
+    - ./src:/var/www/html
+    depends_on:
+      - mysql
+    working_dir: /var/www/html
+    entrypoint: ['php','/var/www/html/artisan']
+    networks:
+      - backend
